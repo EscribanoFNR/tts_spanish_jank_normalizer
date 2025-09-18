@@ -3,56 +3,53 @@ import json
 from num2words import num2words
 
 def normalize_numbers(text: str, logger=None) -> str:
-    """
-    Busca y convierte números a su representación textual.
-    - Maneja separadores de miles (puntos).
-    - Maneja separadores decimales (comas).
-    - Registra una única entrada de log si se realizan cambios.
-    """
     original_text = text
     modifications = []
 
-    # Explicación de la Regex:
-    # \b                   - Límite de palabra al inicio para no coger números que son parte de otra palabra.
-    # \d{1,3}              - Un grupo de 1 a 3 dígitos para empezar.
-    # (\.\d{3})*           - Cero o más grupos de (punto seguido de 3 dígitos). Esto captura los separadores de miles.
-    # (,\d+)?              - Un grupo opcional de (coma seguida de 1 o más dígitos). Esto captura la parte decimal.
-    # (?!\w)               - Aserción: lo que sigue no es un carácter de palabra, para no cortar un número más largo.
-    pattern = re.compile(r'\b\d{1,3}(\.\d{3})*(,\d+)?(?!\w)')
+    # --- REGEX CORREGIDA ---
+    # Usamos lookbehind negativo para evitar que el signo negativo sea parte de otra palabra
+    pattern = re.compile(r'(?<!\w)(-?\d{1,3}(\.\d{3})*(,\d+)?)(?!\w)')
 
     def number_replacer(match):
-        number_str = match.group(0)
+        number_str = match.group(1)
         
-        # Eliminar los puntos de miles
+        # Limpiamos los puntos de millares
         cleaned_number_str = number_str.replace('.', '')
+        
+        # Verificamos si es negativo
+        is_negative = cleaned_number_str.startswith('-')
+        if is_negative:
+            cleaned_number_str = cleaned_number_str[1:]  # Eliminamos el signo negativo
 
-        # Comprobar si hay parte decimal
         if ',' in cleaned_number_str:
             integer_part, decimal_part = cleaned_number_str.split(',')
-            # Convertir ambas partes a texto
+            # Convertimos la parte entera
             text_integer = num2words(int(integer_part), lang='es')
+            # Convertimos la parte decimal
             text_decimal = num2words(int(decimal_part), lang='es')
-            # Unirlas con "coma"
-            final_text = f"{text_integer} coma {text_decimal}"
+            # Si es negativo, añadimos "menos"
+            if is_negative:
+                final_text = f"menos {text_integer} coma {text_decimal}"
+            else:
+                final_text = f"{text_integer} coma {text_decimal}"
         else:
-            # Si no hay decimales, solo convertir la parte entera
-            final_text = num2words(int(cleaned_number_str), lang='es')
+            # Convertimos el número entero
+            num_int = int(cleaned_number_str)
+            text_number = num2words(num_int, lang='es')
+            if is_negative:
+                final_text = f"menos {text_number}"
+            else:
+                final_text = text_number
 
-        modifications.append({
-            "detectado": number_str,
-            "aplicado": final_text
-        })
+        modifications.append({"detectado": number_str, "aplicado": final_text})
         return final_text
 
     processed_text = pattern.sub(number_replacer, text)
 
-    # Solo escribimos en el log si hubo cambios.
     if modifications and logger:
         log_entry = {
-            "frase_original": original_text,
-            "frase_modificada": processed_text,
-            "regla_aplicada": "normalize_numbers",
-            "modificaciones": modifications
+            "frase_original": original_text, "frase_modificada": processed_text,
+            "regla_aplicada": "normalize_numbers", "modificaciones": modifications
         }
         logger.info(json.dumps(log_entry, ensure_ascii=False))
 
