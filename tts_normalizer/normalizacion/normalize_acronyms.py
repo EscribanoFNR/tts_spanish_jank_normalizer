@@ -4,7 +4,7 @@ import json
 # Lista de acrónimos conocidos que deben ser deletreados.
 # Esta lista puede crecer según las necesidades.
 ACRONYMS = [
-    "DNI", "IVA", "IPC", "OMS", "ONU", "OTAN", "UE", "ONG", "PYME", "CEO"
+    "DNI", "IVA", "IPC", "OMS", "ONU", "OTAN", "UE", "ONG", "PYME", "CEO", "IQ"
 ]
 
 def normalize_acronyms(text: str, logger=None) -> str:
